@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>错题本 - Mistake Book</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="错题本">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===== 首页 ===== -->
+    <section id="page-index" class="page active">
+      <div class="topbar">
+        <div class="brand">
+          <span class="brand-text serif brand-grad">错题本</span>
+          <span class="brand-sub mono">mistake.book</span>
+        </div>
+        <div class="top-actions">
+          <div class="theme-toggle" id="theme-toggle">
+            <span class="theme-icon">🌙</span>
+          </div>
+          <div class="avatar" id="avatar-btn">
+            <span class="avatar-fallback">学</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-num mono" id="stat-total">0</span>
+          <span class="stat-label">总错题</span>
+        </div>
+        <div class="stat-div"></div>
+        <div class="stat">
+          <span class="stat-num mono accent2" id="stat-due">0</span>
+          <span class="stat-label">待复习</span>
+        </div>
+        <div class="stat-div"></div>
+        <div class="stat">
+          <span class="stat-num mono green" id="stat-mastered">0</span>
+          <span class="stat-label">已掌握</span>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <div>
+          <span class="section-title serif">今日复习</span>
+          <span class="section-sub mono" id="due-count">0 cards</span>
+        </div>
+        <div class="section-action" id="btn-start-review">开始 →</div>
+      </div>
+
+      <div class="hscroll" id="due-list"></div>
+
+      <div class="section-head">
+        <div>
+          <span class="section-title serif">最近错题</span>
+          <span class="section-sub mono">recent</span>
+        </div>
+        <div class="section-action" id="btn-add-new">+ 新增</div>
+      </div>
+
+      <div class="recent-list" id="recent-list"></div>
+
+      <div class="bottom-pad"></div>
+    </section>
+
+    <!-- ===== 闪卡复习 ===== -->
+    <section id="page-card" class="page">
+      <div class="topbar">
+        <div class="back" id="card-back">
+          <span>‹</span>
+        </div>
+        <div class="progress-wrap">
+          <span class="progress-num mono" id="card-progress-text">1 / 1</span>
+          <div class="progress-bar">
+            <div class="progress-fill" id="card-progress-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+        <div class="back back-ghost"></div>
+      </div>
+
+      <div id="card-content">
+        <div class="flip-wrap">
+          <div class="flip" id="flip-card">
+            <div class="face face-front">
+              <div class="face-head">
+                <span class="tag" id="card-subject-tag">数学</span>
+                <div class="dots" id="card-difficulty-dots"></div>
+              </div>
+              <div class="face-body">
+                <span class="card-q serif" id="card-question"></span>
+                <span class="card-q-sub" id="card-question-sub" style="display: none;"></span>
+              </div>
+              <div class="face-foot">
+                <span class="hint-pulse">点击翻转 ↻</span>
+              </div>
+            </div>
+            <div class="face face-back">
+              <div class="face-head">
+                <span class="back-label mono">解题过程</span>
+                <span class="tag" id="card-subject-tag-back">数学</span>
+              </div>
+              <div class="back-body" id="card-back-body">
+                <span class="back-note" id="card-note"></span>
+                <div class="error-box" id="card-error-box" style="display: none;">
+                  <div class="error-bar"></div>
+                  <div class="error-content">
+                    <span class="error-label mono">错因</span>
+                    <span class="error-text" id="card-error-reason"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="face-foot">
+                <span class="hint-back">↻ 点击翻回</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rate" id="rate-buttons">
+          <div class="rate-btn rate-easy" data-rating="easy">
+            <span class="rate-emoji">😊</span>
+            <span class="rate-label">简单</span>
+            <span class="rate-sub mono">+7d</span>
+          </div>
+          <div class="rate-btn rate-medium" data-rating="medium">
+            <span class="rate-emoji">🤔</span>
+            <span class="rate-label">一般</span>
+            <span class="rate-sub mono">+3d</span>
+          </div>
+          <div class="rate-btn rate-hard" data-rating="hard">
+            <span class="rate-emoji">😰</span>
+            <span class="rate-label">困难</span>
+            <span class="rate-sub mono">+1d</span>
+          </div>
+        </div>
+
+        <div class="meta" id="card-meta">
+          <div class="meta-head">
+            <span class="meta-title mono">--- 元信息 ---</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">科目</span>
+            <span class="meta-val" id="meta-subject"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">难度</span>
+            <span class="meta-val" id="meta-difficulty"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">错误次数</span>
+            <span class="meta-val accent3" id="meta-error-count"></span>
+          </div>
+          <div class="meta-row" id="meta-tags-row" style="display: none;">
+            <span class="meta-key mono">知识点</span>
+            <div class="meta-val" id="meta-tags"></div>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">上次复习</span>
+            <span class="meta-val mono" id="meta-last-reviewed"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">下次复习</span>
+            <span class="meta-val mono accent" id="meta-next-review"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="card-empty" class="empty" style="display: none;">
+        <span class="empty-emoji">🎉</span>
+        <span class="empty-title">复习完成</span>
+        <span class="empty-sub">今日的卡片都看完啦</span>
+        <div class="btn btn-accent btn-back" id="card-back-home">返回首页</div>
+      </div>
+    </section>
+
+    <!-- ===== 知识图谱 ===== -->
+    <section id="page-graph" class="page page-wide">
+      <div class="head graph-head">
+        <div class="graph-head-main">
+          <span class="title serif brand-grad">知识图谱</span>
+          <span class="subtitle mono" id="graph-stats">0 个错题 · 0 个知识点</span>
+        </div>
+        <div class="graph-head-actions">
+          <div class="ghost-btn" id="graph-fullscreen" title="全屏">⛶</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="lg-item"><div class="lg-dot bg-math"></div><span>数学</span></div>
+        <div class="lg-item"><div class="lg-dot bg-physics"></div><span>物理</span></div>
+        <div class="lg-item"><div class="lg-dot bg-chemistry"></div><span>化学</span></div>
+        <div class="lg-item"><div class="lg-dot bg-biology"></div><span>生物</span></div>
+        <div class="lg-item"><div class="lg-dot bg-chinese"></div><span>语文</span></div>
+        <div class="lg-item"><div class="lg-dot bg-english"></div><span>英语</span></div>
+        <div class="lg-item"><div class="lg-dot bg-history"></div><span>历史</span></div>
+        <div class="lg-item"><div class="lg-dot bg-geography"></div><span>地理</span></div>
+        <div class="lg-item"><div class="lg-dot bg-politics"></div><span>政治</span></div>
+        <div class="lg-item"><div class="lg-dot bg-other"></div><span>其他</span></div>
+      </div>
+
+      <div class="canvas-wrap" id="graph-wrap">
+        <canvas id="graphCanvas" class="graph-canvas"></canvas>
+        <div class="graph-controls">
+          <div class="gc-btn" id="gc-zoom-in" title="放大">+</div>
+          <div class="gc-btn" id="gc-zoom-out" title="缩小">−</div>
+          <div class="gc-btn" id="gc-reset" title="重置视图">⊙</div>
+          <div class="gc-btn" id="gc-recompute" title="重新布局">↻</div>
+        </div>
+        <div class="graph-search">
+          <input id="graph-search-input" placeholder="搜索知识点…" />
+        </div>
+        <div class="graph-tooltip" id="graph-tooltip" style="display:none;"></div>
+        <div class="canvas-empty" id="graph-empty">
+          <span class="emoji">🌌</span>
+          <span>没有知识点，先去录入错题吧</span>
+        </div>
+      </div>
+
+      <div class="graph-hint mono">拖拽节点 · 滚轮缩放 · 空白拖动 · 单击跳转题库</div>
+
+      <div class="graph-tag-panel" id="graph-tag-panel" style="display:none;">
+        <div class="gtp-main">
+          <span class="gtp-hash">#</span>
+          <span class="gtp-name" id="graph-tag-name"></span>
+          <span class="gtp-count mono" id="graph-tag-count">0 道错题</span>
+        </div>
+        <div class="gtp-actions">
+          <div class="btn btn-accent gtp-goto" id="graph-tag-goto">在题库查看 →</div>
+          <div class="btn btn-ghost gtp-close" id="graph-tag-close">✕</div>
+        </div>
+      </div>
+
+      <div class="bottom-pad"></div>
+    </section>
+
+    <!-- ===== 题库 (Notion-style database) ===== -->
+    <section id="page-vault" class="page page-wide">
+      <div class="head">
+        <span class="title serif brand-grad">题库</span>
+        <span class="subtitle mono" id="vault-stats">0 entries</span>
+      </div>
+
+      <div class="view-tabs" id="view-tabs">
+        <div class="view-tab active" data-view="table">
+          <span class="vt-icon">⊞</span><span>表格</span>
+        </div>
+        <div class="view-tab" data-view="gallery">
+          <span class="vt-icon">▦</span><span>画廊</span>
+        </div>
+        <div class="view-tab" data-view="board">
+          <span class="vt-icon">▥</span><span>看板</span>
+        </div>
+      </div>
+
+      <div class="vault-toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input class="search-input" id="vault-search" placeholder="搜索题目 / 标签 / 错因…" />
+        </div>
+        <div class="toolbar-actions">
+          <div class="tb-btn" id="vault-filter-btn">
+            <span>筛选</span>
+            <span class="tb-count" id="vault-filter-count" style="display:none;">0</span>
+          </div>
+          <div class="tb-btn" id="vault-sort-btn">
+            <span>排序</span>
+            <span class="tb-sub mono" id="vault-sort-label">最新</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-panel" id="vault-filter-panel" style="display:none;">
+        <div class="filter-group">
+          <span class="fg-key mono">科目</span>
+          <div class="chips" id="vfilter-subjects">
+            <div class="chip chip-on" data-subject="">全部</div>
+            <div class="chip chip-math"      data-subject="math">数学</div>
+            <div class="chip chip-physics"   data-subject="physics">物理</div>
+            <div class="chip chip-chemistry" data-subject="chemistry">化学</div>
+            <div class="chip chip-biology"   data-subject="biology">生物</div>
+            <div class="chip chip-chinese"   data-subject="chinese">语文</div>
+            <div class="chip chip-english"   data-subject="english">英语</div>
+            <div class="chip chip-history"   data-subject="history">历史</div>
+            <div class="chip chip-geography" data-subject="geography">地理</div>
+            <div class="chip chip-politics"  data-subject="politics">政治</div>
+            <div class="chip"               data-subject="other">其他</div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="fg-key mono">状态</span>
+          <div class="chips" id="vfilter-status">
+            <div class="chip chip-on" data-status="">全部</div>
+            <div class="chip" data-status="due">待复习</div>
+            <div class="chip" data-status="learning">复习中</div>
+            <div class="chip" data-status="mastered">已掌握</div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="fg-key mono">难度</span>
+          <div class="chips" id="vfilter-diff">
+            <div class="chip chip-on" data-diff="">全部</div>
+            <div class="chip" data-diff="1"><span class="emoji">😊</span><span>简单</span></div>
+            <div class="chip" data-diff="2"><span class="emoji">🤔</span><span>一般</span></div>
+            <div class="chip" data-diff="3"><span class="emoji">😰</span><span>困难</span></div>
+          </div>
+        </div>
+        <div class="filter-group" id="vfilter-tags-group" style="display:none;">
+          <span class="fg-key mono">知识点</span>
+          <div class="chips chips-tags" id="vfilter-tags"></div>
+        </div>
+      </div>
+
+      <div class="sort-menu" id="vault-sort-menu" style="display:none;">
+        <div class="sort-item" data-sort="createdAt-desc"><span>最新优先</span><span class="sort-arrow mono">↓</span></div>
+        <div class="sort-item" data-sort="createdAt-asc"><span>最早优先</span><span class="sort-arrow mono">↑</span></div>
+        <div class="sort-item" data-sort="errorCount-desc"><span>错次最多</span><span class="sort-arrow mono">↓</span></div>
+        <div class="sort-item" data-sort="difficulty-desc"><span>最难优先</span><span class="sort-arrow mono">↓</span></div>
+        <div class="sort-item" data-sort="nextReview-asc"><span>最近到期</span><span class="sort-arrow mono">↑</span></div>
+        <div class="sort-item" data-sort="title-asc"><span>题目 A→Z</span><span class="sort-arrow mono">↑</span></div>
+      </div>
+
+      <div class="vault-body" id="vault-body"></div>
+
+      <div class="bottom-pad"></div>
+    </section>
+
+    <!-- ===== 录入错题 ===== -->
+    <section id="page-add" class="page">
+      <div class="head">
+        <span class="title serif">录入新错题</span>
+        <span class="subtitle">拍照或手动输入，知识不再遗漏</span>
+      </div>
+
+      <div class="upload" id="upload-area">
+        <div class="upload-empty" id="upload-empty">
+          <div class="upload-icon">📷</div>
+          <span class="upload-title">点击上传题目图片</span>
+          <span class="upload-hint">支持 JPG / PNG / WEBP</span>
+        </div>
+        <img class="preview" id="image-preview" style="display: none;" />
+        <div class="upload-actions" id="upload-actions" style="display: none;">
+          <div class="chip" id="btn-remove-image">
+            <span class="ico">✕</span>
+            <span>移除图片</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-key mono">题干</span>
+          <span class="label-name">支持 Markdown 和 LaTeX 公式（$$…$$）</span>
+          <span class="preview-toggle" id="form-content-preview-toggle">预览</span>
+        </div>
+        <textarea class="textarea" id="form-content" placeholder="输入题干，如：求 $$f(x) = x^2 + 1$$ 的导数…" rows="4"></textarea>
+        <div class="md-preview" id="form-content-preview" style="display:none;"></div>
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-key mono">科目</span>
+        </div>
+        <div class="chips" id="subject-chips">
+          <div class="chip chip-on chip-math"      data-key="math"><span>数学</span></div>
+          <div class="chip chip-physics"            data-key="physics"><span>物理</span></div>
+          <div class="chip chip-chemistry"          data-key="chemistry"><span>化学</span></div>
+          <div class="chip chip-biology"            data-key="biology"><span>生物</span></div>
+          <div class="chip chip-chinese"            data-key="chinese"><span>语文</span></div>
+          <div class="chip chip-english"            data-key="english"><span>英语</span></div>
+          <div class="chip chip-history"            data-key="history"><span>历史</span></div>
+          <div class="chip chip-geography"          data-key="geography"><span>地理</span></div>
+          <div class="chip chip-politics"           data-key="politics"><span>政治</span></div>
+          <div class="chip"                         data-key="other"><span>其他</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-key mono">知识点</span>
+          <span class="label-name">逗号分隔</span>
+        </div>
+        <input class="input" id="form-tags" placeholder="如：函数, 导数, 极值" />
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-key mono">错误原因</span>
+        </div>
+        <input class="input" id="form-error-reason" placeholder="如：忽略定义域 / 计算失误" />
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-key mono">难度</span>
+        </div>
+        <div class="chips" id="difficulty-chips">
+          <div class="chip chip-emoji" data-value="1"><span class="emoji">😊</span><span>简单</span></div>
+          <div class="chip chip-emoji chip-on" data-value="2"><span class="emoji">🤔</span><span>一般</span></div>
+          <div class="chip chip-emoji" data-value="3"><span class="emoji">😰</span><span>困难</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-key mono">解题笔记</span>
+          <span class="label-name">支持 Markdown / LaTeX</span>
+          <span class="preview-toggle" id="form-note-preview-toggle">预览</span>
+        </div>
+        <textarea class="textarea" id="form-note" placeholder="记下完整解法、关键步骤、易错点…公式用 $$…$$ 包裹" rows="4"></textarea>
+        <div class="md-preview" id="form-note-preview" style="display:none;"></div>
+      </div>
+
+      <div class="actions">
+        <div class="btn btn-accent btn-save" id="btn-save">保存到错题本</div>
+        <div class="btn btn-ghost" id="btn-cancel">取消</div>
+      </div>
+    </section>
+
+    <!-- ===== 错题详情 ===== -->
+    <section id="page-detail" class="page">
+      <div id="detail-content">
+        <div class="d-head">
+          <span class="tag" id="detail-subject-tag">数学</span>
+          <div class="dots" id="detail-difficulty-dots"></div>
+        </div>
+
+        <span class="d-title serif" id="detail-title"></span>
+
+        <img class="d-image" id="detail-image" style="display: none;" />
+
+        <div class="d-section">
+          <span class="d-key mono">题干</span>
+          <span class="d-content" id="detail-content-text"></span>
+        </div>
+
+        <div class="error-box" id="detail-error-box" style="display: none;">
+          <div class="error-bar"></div>
+          <div class="error-content">
+            <span class="d-key mono accent3">错因</span>
+            <span class="d-content" id="detail-error-reason"></span>
+          </div>
+        </div>
+
+        <div class="d-section" id="detail-note-section" style="display: none;">
+          <span class="d-key mono">解题笔记</span>
+          <span class="d-content" id="detail-note"></span>
+        </div>
+
+        <div class="d-section" id="detail-tags-section" style="display: none;">
+          <span class="d-key mono">标签</span>
+          <div class="d-tags" id="detail-tags"></div>
+        </div>
+
+        <div class="meta">
+          <div class="meta-row">
+            <span class="meta-key mono">错误次数</span>
+            <span class="meta-val accent3" id="detail-error-count"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">复习间隔</span>
+            <span class="meta-val mono" id="detail-interval"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">上次复习</span>
+            <span class="meta-val mono" id="detail-last-reviewed"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">下次复习</span>
+            <span class="meta-val mono accent" id="detail-next-review"></span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key mono">掌握状态</span>
+            <span class="meta-val" id="detail-mastered"></span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="btn btn-accent" id="btn-review-now">立即复习</div>
+          <div class="btn btn-ghost" id="btn-toggle-mastered">标为已掌握</div>
+          <div class="btn btn-ghost btn-danger" id="btn-delete">删除</div>
+        </div>
+
+        <div class="bottom-pad"></div>
+      </div>
+
+      <div class="d-loading" id="detail-loading">
+        <span>加载中…</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 底部导航 -->
+  <nav class="tab-bar">
+    <div class="tab-item active" data-page="index">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">首页</span>
+    </div>
+    <div class="tab-item" data-page="vault">
+      <span class="tab-icon">📚</span>
+      <span class="tab-label">题库</span>
+    </div>
+    <div class="tab-item" data-page="card">
+      <span class="tab-icon">🃏</span>
+      <span class="tab-label">复习</span>
+    </div>
+    <div class="tab-item" data-page="graph">
+      <span class="tab-icon">🌐</span>
+      <span class="tab-label">图谱</span>
+    </div>
+    <div class="tab-item" data-page="add">
+      <span class="tab-icon">➕</span>
+      <span class="tab-label">录入</span>
+    </div>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="utils/review.js"></script>
+  <script src="utils/db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
