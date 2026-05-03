@@ -205,7 +205,7 @@ async function refreshIndex() {
               <span class="tag tag-${m.subject}">${subjects[m.subject].name}</span>
               <span class="due-count">×${m.errorCount || 1}</span>
             </div>
-            <span class="due-title serif">${m.title || m.content}</span>
+            <span class="due-title serif md-rendered">${renderContent(m.title || m.content)}</span>
             <div class="due-foot">
               <div class="dots">
                 ${[1,2,3].map(d => `<div class="dot ${d <= m.difficulty ? 'on' : ''}"></div>`).join('')}
@@ -240,7 +240,7 @@ async function refreshIndex() {
             </div>
             <div class="recent-main">
               <div class="recent-row1">
-                <span class="recent-title">${m.title || m.content}</span>
+                <span class="recent-title md-rendered">${renderContent(m.title || m.content)}</span>
               </div>
               <div class="recent-row2">
                 <span class="tag tag-${m.subject}">${subjects[m.subject].name}</span>
@@ -1090,10 +1090,11 @@ function renderVaultTable(list) {
     const st = statusOf(m);
     const tags = (m.tags || []).slice(0, 3).map(t => `<span class="vt-tag">#${t}</span>`).join('');
     const more = (m.tags?.length || 0) > 3 ? `<span class="vt-tag-more mono">+${m.tags.length - 3}</span>` : '';
+    const titleText = m.title || m.content || '未命名';
     return `
       <div class="vt-row" data-id="${m._id}">
         <div class="vt-cell vt-c-title">
-          <span class="vt-title-text">${escapeHtml(m.title || m.content || '未命名')}</span>
+          <span class="vt-title-text md-rendered">${renderContent(titleText)}</span>
         </div>
         <div class="vt-cell vt-c-subj">
           <span class="tag tag-${m.subject}">${subjects[m.subject]?.name || '其他'}</span>
@@ -1128,7 +1129,7 @@ function renderVaultGallery(list) {
               <span class="tag tag-${m.subject}">${subjects[m.subject]?.name || '其他'}</span>
               <span class="status-pill status-${st.key}">${st.label}</span>
             </div>
-            <div class="gc-title">${escapeHtml(m.title || m.content || '未命名')}</div>
+            <div class="gc-title md-rendered">${renderContent(m.title || m.content || '未命名')}</div>
             <div class="gc-tags">${tags}</div>
             <div class="gc-foot">
               <div class="dots">${[1,2,3].map(d => `<div class="dot ${d <= m.difficulty ? 'on' : ''}"></div>`).join('')}</div>
@@ -1168,7 +1169,7 @@ function renderVaultBoard(list) {
                 const tags = (m.tags || []).slice(0, 2).map(t => `<span class="vt-tag">#${t}</span>`).join('');
                 return `
                   <div class="board-card" data-id="${m._id}">
-                    <div class="bc-title">${escapeHtml(m.title || m.content || '未命名')}</div>
+                    <div class="bc-title md-rendered">${renderContent(m.title || m.content || '未命名')}</div>
                     <div class="bc-tags">${tags}</div>
                     <div class="bc-foot">
                       <span class="status-pill status-${st.key}">${st.label}</span>
