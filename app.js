@@ -61,6 +61,7 @@ let graphAnim = null;
 let graphSim = null;
 let graphMistakes = [];
 let graphFilterTag = '';
+let graphState = { mode: 'tag', threshold: 0.70 };
 
 let vaultState = {
   view: 'table',
@@ -464,6 +465,10 @@ async function refreshGraph() {
 
   graphMistakes = mistakes;
 
+  if (graphState.mode === 'semantic') {
+    return refreshSemanticGraph(mistakes);
+  }
+
   const tagMap = {};
   const edgeMap = {};
 
@@ -497,10 +502,79 @@ async function refreshGraph() {
   document.getElementById('graph-stats').textContent = `${mistakes.length} 个错题 · ${tags.length} 个知识点 · ${Object.keys(edgeMap).length} 条连线`;
   document.getElementById('graph-empty').style.display = tags.length === 0 ? 'flex' : 'none';
 
-  initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount);
+  initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount, { mode: 'tag' });
 }
 
-function initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount) {
+async function refreshSemanticGraph(mistakes) {
+  const stored = _getStoredEmbeddings();
+  const stats = (typeof getEmbeddingStats === 'function') ? getEmbeddingStats() : { count: 0 };
+  const threshold = graphState.threshold;
+  const banner = document.getElementById('graph-semantic-banner');
+  const bannerText = document.getElementById('graph-semantic-text');
+  const bannerActions = document.getElementById('graph-semantic-actions');
+
+  const indexedMistakes = mistakes.filter(m => m._id && stored[m._id]);
+  if (mistakes.length > 0 && indexedMistakes.length < mistakes.length) {
+    banner.style.display = 'flex';
+    banner.classList.add('is-warn');
+    bannerText.textContent = `已索引 ${indexedMistakes.length} / ${mistakes.length} 道错题，剩余 ${mistakes.length - indexedMistakes.length} 道未生成 embedding。`;
+    bannerActions.innerHTML = `<div class="btn btn-accent" id="graph-gen-btn">补全 embedding</div>`;
+    document.getElementById('graph-gen-btn').onclick = () => generateAllEmbeddings();
+  } else if (indexedMistakes.length === 0) {
+    banner.style.display = 'flex';
+    banner.classList.add('is-warn');
+    bannerText.textContent = `尚无任何错题被索引。点击下方按钮开始生成 embedding。`;
+    bannerActions.innerHTML = `<div class="btn btn-accent" id="graph-gen-btn">生成全部 embedding</div>`;
+    document.getElementById('graph-gen-btn').onclick = () => generateAllEmbeddings();
+  } else {
+    banner.style.display = 'none';
+  }
+
+  if (indexedMistakes.length < 2) {
+    document.getElementById('graph-stats').textContent = `${indexedMistakes.length} 个已索引错题`;
+    document.getElementById('graph-empty').style.display = indexedMistakes.length === 0 ? 'flex' : 'none';
+    if (graphSim && graphSim.cleanup) graphSim.cleanup();
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  const tagMap = {};
+  const edgeMap = {};
+  indexedMistakes.forEach(m => {
+    tagMap[m._id] = {
+      count: 1,
+      subjects: { [m.subject || 'other']: 1 },
+      mistakes: [m._id],
+      label: m.title || m.content?.slice(0, 20) || '未命名',
+      subject: m.subject || 'other'
+    };
+  });
+  const edges = computeSimilarityGraph(stored, threshold);
+  edges.forEach(e => {
+    const key = [e.source, e.target].sort().join('|');
+    edgeMap[key] = e.weight;
+  });
+
+  const dominantSubject = (subjMap) => {
+    let best = 'other', bestCount = -1;
+    Object.keys(subjMap).forEach(s => {
+      if (subjMap[s] > bestCount) { best = s; bestCount = subjMap[s]; }
+    });
+    return best;
+  };
+
+  const ids = indexedMistakes.map(m => m._id);
+  const maxCount = 1;
+  document.getElementById('graph-stats').textContent = `${ids.length} 道已索引错题 · ${edges.length} 条语义连线 · 阈值 ${threshold.toFixed(2)}`;
+  document.getElementById('graph-empty').style.display = 'none';
+
+  initForceGraph(ids, tagMap, edgeMap, dominantSubject, maxCount, { mode: 'semantic' });
+}
+
+function initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount, options = {}) {
+  const graphMode = options.mode || 'tag';
   const canvas = document.getElementById('graphCanvas');
   const wrap = document.getElementById('graph-wrap');
   const tooltip = document.getElementById('graph-tooltip');
@@ -745,11 +819,18 @@ function initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount) {
         ctx.font = `500 ${fs}px -apple-system, "PingFang SC", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText(n.id, n.x, n.y + n.r + 3);
+        ctx.fillText(nodeLabel(n), n.x, n.y + n.r + 3);
       }
     });
 
     ctx.restore();
+  }
+
+  function nodeLabel(n) {
+    if (graphMode === 'semantic') {
+      return (n.label || n.id).slice(0, 14);
+    }
+    return n.id;
   }
 
   function loop() {
@@ -819,8 +900,14 @@ function initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount) {
     }
     if (hoverNode) {
       tooltip.style.display = 'block';
-      tooltip.innerHTML = `<div class="gt-tag">#${hoverNode.id}</div>
-        <div class="gt-meta">${hoverNode.count} 题 · ${neighbors[hoverNode.id].size - 1} 关联</div>`;
+      if (graphMode === 'semantic') {
+        const subj = subjects[hoverNode.subject]?.name || '其他';
+        tooltip.innerHTML = `<div class="gt-tag">${escapeHtml(hoverNode.label || '未命名')}</div>
+          <div class="gt-meta">${subj} · ${neighbors[hoverNode.id].size - 1} 关联错题</div>`;
+      } else {
+        tooltip.innerHTML = `<div class="gt-tag">#${hoverNode.id}</div>
+          <div class="gt-meta">${hoverNode.count} 题 · ${neighbors[hoverNode.id].size - 1} 关联</div>`;
+      }
       const wrapRect = wrap.getBoundingClientRect();
       tooltip.style.left = (e.clientX - wrapRect.left + 14) + 'px';
       tooltip.style.top = (e.clientY - wrapRect.top + 14) + 'px';
@@ -835,7 +922,11 @@ function initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount) {
       Math.abs(e.clientY - pointerDownPos.y) > 4
     );
     if (dragNode && !moved) {
-      applyFilter(dragNode.id);
+      if (graphMode === 'semantic') {
+        openDetail(dragNode.id);
+      } else {
+        applyFilter(dragNode.id);
+      }
     }
     dragNode = null;
     isPanning = false;
@@ -898,7 +989,13 @@ function initForceGraph(tags, tagMap, edgeMap, dominantSubject, maxCount) {
   }
 
   function focusOnTag(tag) {
-    const node = nodes.find(n => n.id.toLowerCase().includes(tag.toLowerCase()));
+    const q = tag.toLowerCase();
+    const node = nodes.find(n => {
+      if (graphMode === 'semantic') {
+        return (n.label || '').toLowerCase().includes(q) || n.id.toLowerCase().includes(q);
+      }
+      return n.id.toLowerCase().includes(q);
+    });
     if (!node) return;
     hoverNode = node;
     panX = W / 2 - node.x * scale;
@@ -1727,6 +1824,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (graphSim) graphSim.reset();
         refreshGraph();
       }, 50);
+    };
+  }
+
+  // 图谱模式切换
+  document.querySelectorAll('.gms-opt').forEach(opt => {
+    opt.onclick = () => {
+      const mode = opt.dataset.mode;
+      if (mode === graphState.mode) return;
+      if (mode === 'semantic') {
+        const cfg = (typeof getAiConfig === 'function') ? getAiConfig() : null;
+        if (!cfg || !cfg.apiKey) {
+          showToast('请先在设置中配置 API Key');
+          return;
+        }
+      }
+      graphState.mode = mode;
+      document.querySelectorAll('.gms-opt').forEach(o => o.classList.toggle('active', o.dataset.mode === mode));
+      document.getElementById('graph-threshold-wrap').style.display = mode === 'semantic' ? 'inline-flex' : 'none';
+      const search = document.getElementById('graph-search-input');
+      if (search) search.placeholder = mode === 'semantic' ? '搜索错题…' : '搜索知识点…';
+      refreshGraph();
+    };
+  });
+
+  const thresholdInput = document.getElementById('graph-threshold');
+  const thresholdVal = document.getElementById('graph-threshold-val');
+  if (thresholdInput) {
+    thresholdInput.oninput = (e) => {
+      const v = parseInt(e.target.value, 10) / 100;
+      graphState.threshold = v;
+      thresholdVal.textContent = v.toFixed(2);
+      if (graphState.mode === 'semantic') refreshGraph();
     };
   }
 

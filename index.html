@@ -190,8 +190,22 @@
           <span class="subtitle mono" id="graph-stats">0 个错题 · 0 个知识点</span>
         </div>
         <div class="graph-head-actions">
+          <div class="graph-mode-switch">
+            <div class="gms-opt active" data-mode="tag">标签</div>
+            <div class="gms-opt" data-mode="semantic">语义</div>
+          </div>
+          <div class="graph-threshold-wrap" id="graph-threshold-wrap" style="display:none;">
+            <span class="gt-label mono">阈值</span>
+            <input type="range" id="graph-threshold" min="50" max="95" value="70" step="5" />
+            <span class="gt-value mono" id="graph-threshold-val">0.70</span>
+          </div>
           <div class="ghost-btn" id="graph-fullscreen" title="全屏">⛶</div>
         </div>
+      </div>
+
+      <div class="graph-semantic-banner" id="graph-semantic-banner" style="display:none;">
+        <div class="gsb-text" id="graph-semantic-text"></div>
+        <div class="gsb-actions" id="graph-semantic-actions"></div>
       </div>
 
       <div class="legend">
