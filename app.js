@@ -1234,6 +1234,7 @@ function importData(file) {
       }
       const merged = existing.concat(fresh);
       localStorage.setItem('mistakes', JSON.stringify(merged));
+      if (typeof clearAllEmbeddings === 'function') clearAllEmbeddings();
       showToast(`已导入 ${fresh.length} 道错题`);
       setTimeout(() => location.reload(), 600);
     } catch (err) {
@@ -1778,7 +1779,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     try {
-      await addMistake(payload);
+      const newId = await addMistake(payload);
+      if (typeof generateEmbedding === 'function' && newId) {
+        const cfg = (typeof getAiConfig === 'function') ? getAiConfig() : null;
+        if (cfg && cfg.apiKey) {
+          generateEmbedding(mistakeToEmbeddingText(payload))
+            .then(vec => {
+              const stored = _getStoredEmbeddings();
+              stored[newId] = vec;
+              _saveEmbeddings(stored);
+            })
+            .catch(err => console.warn('Auto-embed failed:', err));
+        }
+      }
       showToast('已加入错题本', 800);
       setTimeout(() => {
         navigateTo('index');
@@ -1822,6 +1835,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!confirm) return;
     try {
       await deleteMistake(currentDetailId);
+      if (typeof deleteEmbedding === 'function') deleteEmbedding(currentDetailId);
       showToast('已删除');
       setTimeout(() => navigateTo('index'), 600);
     } catch {
