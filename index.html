@@ -10,7 +10,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="错题本">
-  <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
@@ -498,6 +497,74 @@
       </div>
     </section>
 
+  </div>
+
+  <!-- 设置面板 -->
+  <div id="settings-modal" class="modal-overlay" style="display:none;">
+    <div class="modal settings-modal">
+      <div class="modal-title">设置</div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">AI 设置 <span class="ai-status-badge" id="ai-status-badge">未配置</span></div>
+
+        <div class="settings-field">
+          <div class="settings-label">Provider</div>
+          <select class="input settings-input" id="ai-provider">
+            <option value="openai">OpenAI 兼容</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+
+        <div class="settings-field">
+          <div class="settings-label">API Key</div>
+          <div class="settings-key-row">
+            <input class="input settings-input" type="password" id="ai-key" placeholder="sk-..." autocomplete="off" />
+            <div class="settings-key-toggle" id="ai-key-toggle" title="显示/隐藏">👁</div>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <div class="settings-label">Embedding 模型</div>
+          <input class="input settings-input" type="text" id="ai-model" placeholder="text-embedding-3-small" />
+        </div>
+
+        <div class="settings-field" id="ai-endpoint-field">
+          <div class="settings-label">Endpoint <span class="settings-hint">（中转服务时填写）</span></div>
+          <input class="input settings-input" type="text" id="ai-endpoint" placeholder="https://api.openai.com/v1" />
+        </div>
+
+        <div class="settings-row">
+          <div class="btn btn-ghost" id="ai-test">测试连接</div>
+          <div class="btn btn-accent" id="ai-save">保存配置</div>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="settings-item" id="btn-export">
+        <div class="si-icon">💾</div>
+        <div class="si-info">
+          <div class="si-title">导出备份</div>
+          <div class="si-sub">全部错题（含图片）导出为 JSON 文件</div>
+        </div>
+        <div class="si-arrow">→</div>
+      </div>
+      <div class="settings-item" id="btn-import-trigger">
+        <div class="si-icon">📂</div>
+        <div class="si-info">
+          <div class="si-title">导入数据</div>
+          <div class="si-sub">从备份文件恢复，不覆盖已有错题</div>
+        </div>
+        <div class="si-arrow">→</div>
+      </div>
+      <input type="file" id="import-file-input" accept=".json" style="display:none;" />
+      <div class="btn btn-ghost settings-close" id="settings-close">关闭</div>
+    </div>
+  </div>
+
+  <!-- 图片全屏灯箱 -->
+  <div id="img-lightbox" style="display:none;">
+    <img id="img-lightbox-img" />
   </div>
 
   <!-- 底部导航 -->

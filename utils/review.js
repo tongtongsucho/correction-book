@@ -8,7 +8,7 @@ function computeNextSRS(rating, card) {
 
   if (q >= 3) {
     if (reps === 0) interval = q === 5 ? 4 : 1;
-    else if (reps === 1) interval = q === 5 ? 6 : 4;
+    else if (reps === 1) interval = q === 5 ? 6 : 6;
     else interval = Math.max(1, Math.round(interval * ef));
     ef = Math.max(1.3, ef + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
     reps += 1;

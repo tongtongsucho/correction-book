@@ -205,7 +205,7 @@ async function refreshIndex() {
               <span class="tag tag-${m.subject}">${subjects[m.subject].name}</span>
               <span class="due-count">×${m.errorCount || 1}</span>
             </div>
-            <span class="due-title serif md-rendered">${renderContent(m.title || m.content)}</span>
+            <span class="due-title serif">${m.title || m.content}</span>
             <div class="due-foot">
               <div class="dots">
                 ${[1,2,3].map(d => `<div class="dot ${d <= m.difficulty ? 'on' : ''}"></div>`).join('')}
@@ -240,7 +240,7 @@ async function refreshIndex() {
             </div>
             <div class="recent-main">
               <div class="recent-row1">
-                <span class="recent-title md-rendered">${renderContent(m.title || m.content)}</span>
+                <span class="recent-title">${m.title || m.content}</span>
               </div>
               <div class="recent-row2">
                 <span class="tag tag-${m.subject}">${subjects[m.subject].name}</span>
@@ -265,11 +265,11 @@ async function refreshIndex() {
 }
 
 function openCard(id) {
-  cardState.list = [];  // 空列表，updateCardCurrent 会直接 showCardEmpty
+  cardState.list = [{ _id: id }];
   cardState.cursor = 0;
   cardState.flipped = false;
   navigateTo('card');
-  loadCardSingle(id);  // 回来后再填充
+  loadCardSingle(id);
 }
 
 function openDetail(id) {
@@ -1090,11 +1090,10 @@ function renderVaultTable(list) {
     const st = statusOf(m);
     const tags = (m.tags || []).slice(0, 3).map(t => `<span class="vt-tag">#${t}</span>`).join('');
     const more = (m.tags?.length || 0) > 3 ? `<span class="vt-tag-more mono">+${m.tags.length - 3}</span>` : '';
-    const titleText = m.title || m.content || '未命名';
     return `
       <div class="vt-row" data-id="${m._id}">
         <div class="vt-cell vt-c-title">
-          <span class="vt-title-text md-rendered">${renderContent(titleText)}</span>
+          <span class="vt-title-text">${escapeHtml(m.title || m.content || '未命名')}</span>
         </div>
         <div class="vt-cell vt-c-subj">
           <span class="tag tag-${m.subject}">${subjects[m.subject]?.name || '其他'}</span>
@@ -1129,7 +1128,7 @@ function renderVaultGallery(list) {
               <span class="tag tag-${m.subject}">${subjects[m.subject]?.name || '其他'}</span>
               <span class="status-pill status-${st.key}">${st.label}</span>
             </div>
-            <div class="gc-title md-rendered">${renderContent(m.title || m.content || '未命名')}</div>
+            <div class="gc-title">${escapeHtml(m.title || m.content || '未命名')}</div>
             <div class="gc-tags">${tags}</div>
             <div class="gc-foot">
               <div class="dots">${[1,2,3].map(d => `<div class="dot ${d <= m.difficulty ? 'on' : ''}"></div>`).join('')}</div>
@@ -1169,7 +1168,7 @@ function renderVaultBoard(list) {
                 const tags = (m.tags || []).slice(0, 2).map(t => `<span class="vt-tag">#${t}</span>`).join('');
                 return `
                   <div class="board-card" data-id="${m._id}">
-                    <div class="bc-title md-rendered">${renderContent(m.title || m.content || '未命名')}</div>
+                    <div class="bc-title">${escapeHtml(m.title || m.content || '未命名')}</div>
                     <div class="bc-tags">${tags}</div>
                     <div class="bc-foot">
                       <span class="status-pill status-${st.key}">${st.label}</span>
@@ -1187,6 +1186,171 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[ch]));
+}
+
+function exportData() {
+  const mistakes = JSON.parse(localStorage.getItem('mistakes') || '[]');
+  if (mistakes.length === 0) {
+    showToast('没有错题可以导出');
+    return;
+  }
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    count: mistakes.length,
+    mistakes
+  };
+  const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+  a.download = `错题本备份_${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`已导出 ${mistakes.length} 道错题`);
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const incoming = Array.isArray(parsed) ? parsed
+        : (parsed.mistakes && Array.isArray(parsed.mistakes)) ? parsed.mistakes
+        : null;
+      if (!incoming) {
+        showToast('文件格式不正确');
+        return;
+      }
+      const existing = JSON.parse(localStorage.getItem('mistakes') || '[]');
+      const existingIds = new Set(existing.map(m => m._id));
+      const fresh = incoming.filter(m => m && m._id && !existingIds.has(m._id));
+      if (fresh.length === 0) {
+        showToast('没有新错题可导入');
+        return;
+      }
+      const merged = existing.concat(fresh);
+      localStorage.setItem('mistakes', JSON.stringify(merged));
+      showToast(`已导入 ${fresh.length} 道错题`);
+      setTimeout(() => location.reload(), 600);
+    } catch (err) {
+      showToast('导入失败，文件已损坏');
+    }
+  };
+  reader.readAsText(file);
+}
+
+const AI_CONFIG_KEY = 'ai_config';
+const DEFAULT_AI_CONFIG = {
+  provider: 'openai',
+  apiKey: '',
+  endpoint: 'https://api.openai.com/v1',
+  model: 'text-embedding-3-small'
+};
+
+function getAiConfig() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AI_CONFIG_KEY) || 'null');
+    if (!stored || !stored.apiKey) return { ...DEFAULT_AI_CONFIG };
+    return { ...DEFAULT_AI_CONFIG, ...stored };
+  } catch {
+    return { ...DEFAULT_AI_CONFIG };
+  }
+}
+
+function saveAiConfig(cfg) {
+  localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+function fillAiConfigForm() {
+  const cfg = getAiConfig();
+  const provider = document.getElementById('ai-provider');
+  const key = document.getElementById('ai-key');
+  const endpoint = document.getElementById('ai-endpoint');
+  const model = document.getElementById('ai-model');
+  const endpointField = document.getElementById('ai-endpoint-field');
+  if (!provider || !key) return;
+
+  provider.value = cfg.provider || 'openai';
+  key.value = cfg.apiKey || '';
+  endpoint.value = cfg.endpoint || DEFAULT_AI_CONFIG.endpoint;
+  model.value = cfg.model || DEFAULT_AI_CONFIG.model;
+  endpointField.style.display = provider.value === 'openai' ? 'none' : 'block';
+
+  updateAiStatusBadge();
+}
+
+function readAiConfigForm() {
+  return {
+    provider: document.getElementById('ai-provider').value,
+    apiKey: document.getElementById('ai-key').value.trim(),
+    endpoint: (document.getElementById('ai-endpoint').value.trim() || DEFAULT_AI_CONFIG.endpoint).replace(/\/+$/, ''),
+    model: (document.getElementById('ai-model').value.trim() || DEFAULT_AI_CONFIG.model)
+  };
+}
+
+function updateAiStatusBadge(status) {
+  const badge = document.getElementById('ai-status-badge');
+  if (!badge) return;
+  const cfg = getAiConfig();
+  badge.classList.remove('is-on', 'is-testing', 'is-error');
+  if (status === 'testing') {
+    badge.textContent = '测试中…';
+    badge.classList.add('is-testing');
+  } else if (status === 'error') {
+    badge.textContent = '连接失败';
+    badge.classList.add('is-error');
+  } else if (cfg.apiKey) {
+    badge.textContent = '已配置';
+    badge.classList.add('is-on');
+  } else {
+    badge.textContent = '未配置';
+  }
+}
+
+function maskApiKey(key) {
+  if (!key) return '';
+  if (key.length <= 10) return key.slice(0, 3) + '…' + key.slice(-2);
+  return key.slice(0, 6) + '…' + key.slice(-4);
+}
+
+async function testAiConnection() {
+  const cfg = readAiConfigForm();
+  if (!cfg.apiKey) {
+    showToast('请先填写 API Key');
+    return;
+  }
+  const endpoint = cfg.endpoint.replace(/\/+$/, '');
+  const url = `${endpoint}/embeddings`;
+  updateAiStatusBadge('testing');
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cfg.apiKey}`
+      },
+      body: JSON.stringify({ input: 'test', model: cfg.model })
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`HTTP ${resp.status}: ${errText.slice(0, 80)}`);
+    }
+    const data = await resp.json();
+    if (!data?.data?.[0]?.embedding) {
+      throw new Error('返回数据格式异常');
+    }
+    saveAiConfig(cfg);
+    updateAiStatusBadge('ok');
+    showToast('连接成功 ✓');
+  } catch (err) {
+    console.error('AI test failed:', err);
+    updateAiStatusBadge('error');
+    showToast(`连接失败：${err.message?.slice(0, 50) || '未知错误'}`);
+  }
 }
 
 async function loadDetail(id) {
@@ -1280,6 +1444,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('theme-toggle').onclick = toggleTheme;
 
+  // 设置面板
+  const settingsModal = document.getElementById('settings-modal');
+  document.getElementById('avatar-btn').onclick = () => {
+    settingsModal.style.display = 'flex';
+  };
+  settingsModal.onclick = (e) => {
+    if (e.target === settingsModal) settingsModal.style.display = 'none';
+  };
+  document.getElementById('settings-close').onclick = () => {
+    settingsModal.style.display = 'none';
+  };
+  document.getElementById('btn-export').onclick = () => {
+    exportData();
+    settingsModal.style.display = 'none';
+  };
+  document.getElementById('btn-import-trigger').onclick = () => {
+    document.getElementById('import-file-input').click();
+  };
+  document.getElementById('import-file-input').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    settingsModal.style.display = 'none';
+    importData(file);
+  };
+
+  // AI 设置
+  const aiProvider = document.getElementById('ai-provider');
+  const aiKeyInput = document.getElementById('ai-key');
+  const aiKeyToggle = document.getElementById('ai-key-toggle');
+  const aiEndpointField = document.getElementById('ai-endpoint-field');
+
+  fillAiConfigForm();
+
+  aiProvider.onchange = () => {
+    aiEndpointField.style.display = aiProvider.value === 'openai' ? 'none' : 'block';
+  };
+
+  aiKeyToggle.onclick = () => {
+    const isPassword = aiKeyInput.type === 'password';
+    aiKeyInput.type = isPassword ? 'text' : 'password';
+    aiKeyToggle.textContent = isPassword ? '🙈' : '👁';
+  };
+
+  document.getElementById('ai-save').onclick = () => {
+    const cfg = readAiConfigForm();
+    if (!cfg.apiKey) {
+      showToast('请填写 API Key');
+      return;
+    }
+    saveAiConfig(cfg);
+    updateAiStatusBadge();
+    showToast('AI 配置已保存 ✓');
+  };
+
+  document.getElementById('ai-test').onclick = testAiConnection;
+
   document.querySelectorAll('.tab-item').forEach(tab => {
     tab.onclick = () => navigateTo(tab.dataset.page);
   });
@@ -1301,6 +1522,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelectorAll('.rate-btn').forEach(btn => {
     btn.onclick = () => rateCard(btn.dataset.rating);
+  });
+
+  const cardImageEl = document.getElementById('card-image');
+  if (cardImageEl) {
+    cardImageEl.onclick = (e) => {
+      e.stopPropagation();
+      const src = e.currentTarget.src;
+      if (src) {
+        document.getElementById('img-lightbox-img').src = src;
+        document.getElementById('img-lightbox').style.display = 'flex';
+      }
+    };
+  }
+
+  document.getElementById('img-lightbox').onclick = () => {
+    document.getElementById('img-lightbox').style.display = 'none';
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.getElementById('img-lightbox').style.display = 'none';
+    }
   });
 
   document.getElementById('card-back').onclick = () => navigateTo('index');

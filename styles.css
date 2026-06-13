@@ -2469,3 +2469,184 @@ body {
 .preview-toggle:hover, .preview-toggle.on {
   background: rgba(107, 92, 231, 0.1);
 }
+
+/* ===== 设置面板 ===== */
+.settings-modal {
+  width: 92%;
+  max-width: 380px;
+  padding: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.settings-section {
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-status-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text3);
+  border: 1px solid var(--border);
+}
+
+.ai-status-badge.is-on {
+  background: rgba(82, 196, 26, 0.12);
+  color: #52c41a;
+  border-color: rgba(82, 196, 26, 0.3);
+}
+
+.ai-status-badge.is-testing {
+  background: rgba(107, 92, 231, 0.12);
+  color: var(--accent2);
+  border-color: rgba(107, 92, 231, 0.3);
+}
+
+.ai-status-badge.is-error {
+  background: rgba(255, 77, 79, 0.12);
+  color: #ff4d4f;
+  border-color: rgba(255, 77, 79, 0.3);
+}
+
+.settings-field {
+  margin-bottom: 10px;
+}
+
+.settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.settings-label {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.settings-hint {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 400;
+}
+
+.settings-input {
+  font-size: 13px;
+  padding: 9px 12px;
+}
+
+.settings-key-row {
+  position: relative;
+}
+
+.settings-key-row .settings-input {
+  padding-right: 38px;
+}
+
+.settings-key-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.6;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.settings-key-toggle:hover {
+  opacity: 1;
+  background: var(--border);
+}
+
+.settings-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.settings-row .btn {
+  flex: 1;
+  height: 36px;
+  font-size: 13px;
+}
+
+.settings-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.settings-item:hover {
+  background: var(--surface);
+  border-color: var(--accent2);
+}
+
+.si-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.si-info {
+  flex: 1;
+}
+
+.si-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.si-sub {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.4;
+}
+
+.si-arrow {
+  color: var(--text3);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.settings-close {
+  width: 100%;
+  margin-top: 10px;
+  height: 42px;
+}
