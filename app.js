@@ -70,7 +70,9 @@ let vaultState = {
   difficulty: '',
   tag: '',
   sort: 'createdAt-desc',
-  data: []
+  data: [],
+  semanticMode: false,
+  semanticResults: null
 };
 
 function initTheme() {
@@ -1005,7 +1007,9 @@ function applyVaultFilters(list) {
       if (!m.nextReview || new Date(m.nextReview) > now) return false;
     }
 
-    if (q) {
+    if (vaultState.semanticMode && q && Array.isArray(vaultState.semanticResults)) {
+      if (!vaultState.semanticResults.find(r => r.id === m._id)) return false;
+    } else if (q) {
       const hay = [
         m.title, m.content, m.errorReason, m.note,
         ...(m.tags || []),
@@ -1015,6 +1019,144 @@ function applyVaultFilters(list) {
     }
     return true;
   });
+}
+
+let _semanticSearchTimer = null;
+let _semanticSearchAbort = false;
+
+function setSemanticMode(enabled) {
+  const btn = document.getElementById('vault-semantic-btn');
+  const label = document.getElementById('vault-semantic-label');
+  const search = document.getElementById('vault-search');
+
+  if (enabled) {
+    const cfg = (typeof getAiConfig === 'function') ? getAiConfig() : null;
+    if (!cfg || !cfg.apiKey) {
+      showToast('请先在设置中配置 API Key');
+      return;
+    }
+    vaultState.semanticMode = true;
+    vaultState.semanticResults = null;
+    btn.classList.add('on');
+    label.textContent = '语义 ✓';
+    search.placeholder = '用自然语言描述你想找的错题…';
+  } else {
+    vaultState.semanticMode = false;
+    vaultState.semanticResults = null;
+    btn.classList.remove('on');
+    label.textContent = '语义';
+    search.placeholder = '搜索题目 / 标签 / 错因…';
+  }
+  updateSemanticBanner();
+  renderVault();
+}
+
+function updateSemanticBanner() {
+  const banner = document.getElementById('semantic-banner');
+  const text = document.getElementById('semantic-banner-text');
+  const actions = document.getElementById('semantic-banner-actions');
+  if (!vaultState.semanticMode) { banner.style.display = 'none'; return; }
+
+  const total = vaultState.data.length;
+  const stats = (typeof getEmbeddingStats === 'function') ? getEmbeddingStats() : { count: 0 };
+  const indexed = stats.count;
+  if (total === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+  banner.style.display = 'flex';
+  banner.classList.toggle('is-warn', indexed < total);
+  if (indexed < total) {
+    text.textContent = `已索引 ${indexed} / ${total} 道错题，剩余 ${total - indexed} 道未生成 embedding。`;
+    actions.innerHTML = `<div class="btn btn-accent" id="semantic-gen-btn">补全 embedding</div>`;
+    document.getElementById('semantic-gen-btn').onclick = () => generateAllEmbeddings();
+  } else {
+    text.textContent = `已索引全部 ${total} 道错题，可使用语义搜索。`;
+    actions.innerHTML = '';
+  }
+}
+
+async function runSemanticSearch(query) {
+  if (!vaultState.semanticMode) return;
+  const q = (query || '').trim();
+  if (!q) {
+    vaultState.semanticResults = null;
+    renderVault();
+    return;
+  }
+  const cfg = (typeof getAiConfig === 'function') ? getAiConfig() : null;
+  if (!cfg || !cfg.apiKey) { showToast('请先在设置中配置 API Key'); return; }
+
+  try {
+    const queryVec = await getQueryEmbedding(q);
+    if (_semanticSearchAbort) return;
+    const stored = _getStoredEmbeddings();
+    const top = findSimilarMistakes(queryVec, stored, 30, 0.2);
+    vaultState.semanticResults = top;
+    renderVault();
+  } catch (err) {
+    console.error('Semantic search failed:', err);
+    showToast(`语义搜索失败：${err.message?.slice(0, 40) || '未知错误'}`);
+  }
+}
+
+function triggerSemanticSearch(query) {
+  if (_semanticSearchTimer) clearTimeout(_semanticSearchTimer);
+  _semanticSearchAbort = false;
+  _semanticSearchTimer = setTimeout(() => {
+    if (_semanticSearchAbort) return;
+    runSemanticSearch(query);
+  }, 450);
+}
+
+async function generateAllEmbeddings() {
+  const cfg = (typeof getAiConfig === 'function') ? getAiConfig() : null;
+  if (!cfg || !cfg.apiKey) { showToast('请先在设置中配置 API Key'); return; }
+
+  const mistakes = (typeof listMistakes === 'function')
+    ? await listMistakes({}, 10000)
+    : JSON.parse(localStorage.getItem('mistakes') || '[]');
+
+  const stats = getEmbeddingStats();
+  const todo = mistakes.filter(m => m._id && !(_getStoredEmbeddings()[m._id])).length;
+  if (todo === 0) {
+    showToast('所有错题已索引');
+    updateSemanticBanner();
+    return;
+  }
+
+  const modal = document.getElementById('embed-progress-modal');
+  const text = document.getElementById('embed-progress-text');
+  const fill = document.getElementById('embed-progress-fill');
+  const count = document.getElementById('embed-progress-count');
+  const cancelBtn = document.getElementById('embed-progress-cancel');
+  modal.style.display = 'flex';
+  text.textContent = '正在调用 AI 生成 embedding…';
+
+  let cancelled = false;
+  cancelBtn.onclick = () => { cancelled = true; modal.style.display = 'none'; };
+
+  try {
+    const result = await batchGenerateEmbeddings(mistakes, ({ done, total, failed }) => {
+      if (cancelled) return;
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+      fill.style.width = pct + '%';
+      count.textContent = `${done} / ${total}${failed ? ` (失败 ${failed})` : ''}`;
+      text.textContent = failed > 0 ? `已索引 ${done - failed} 道，${failed} 道失败` : `正在索引错题…`;
+    });
+    if (!cancelled) {
+      fill.style.width = '100%';
+      count.textContent = `${mistakes.length} / ${mistakes.length}`;
+      text.textContent = result.failed > 0
+        ? `完成：成功 ${result.added}，失败 ${result.failed}`
+        : `完成！已索引 ${result.added} 道错题`;
+      setTimeout(() => { modal.style.display = 'none'; }, 900);
+    }
+    updateSemanticBanner();
+  } catch (err) {
+    modal.style.display = 'none';
+    showToast(`生成失败：${err.message?.slice(0, 50)}`);
+  }
 }
 
 function applyVaultSort(list) {
@@ -1044,6 +1186,7 @@ function renderVault() {
     `${filtered.length} / ${vaultState.data.length} entries`;
 
   const body = document.getElementById('vault-body');
+  if (typeof updateSemanticBanner === 'function') updateSemanticBanner();
 
   if (filtered.length === 0) {
     body.innerHTML = `<div class="empty">
@@ -1086,14 +1229,19 @@ function renderVaultTable(list) {
       <div class="vt-cell vt-c-status">状态</div>
       <div class="vt-cell vt-c-next">下次复习</div>
     </div>`;
+  const simMap = (vaultState.semanticMode && Array.isArray(vaultState.semanticResults))
+    ? Object.fromEntries(vaultState.semanticResults.map(r => [r.id, r.similarity]))
+    : {};
   const rows = list.map(m => {
     const st = statusOf(m);
     const tags = (m.tags || []).slice(0, 3).map(t => `<span class="vt-tag">#${t}</span>`).join('');
     const more = (m.tags?.length || 0) > 3 ? `<span class="vt-tag-more mono">+${m.tags.length - 3}</span>` : '';
+    const sim = simMap[m._id];
+    const simBadge = sim != null ? `<span class="sim-badge">${Math.round(sim * 100)}%</span>` : '';
     return `
       <div class="vt-row" data-id="${m._id}">
         <div class="vt-cell vt-c-title">
-          <span class="vt-title-text">${escapeHtml(m.title || m.content || '未命名')}</span>
+          <span class="vt-title-text">${escapeHtml(m.title || m.content || '未命名')}</span>${simBadge}
         </div>
         <div class="vt-cell vt-c-subj">
           <span class="tag tag-${m.subject}">${subjects[m.subject]?.name || '其他'}</span>
@@ -1595,7 +1743,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const vSearch = document.getElementById('vault-search');
   vSearch.oninput = (e) => {
     vaultState.search = e.target.value;
-    renderVault();
+    if (vaultState.semanticMode) {
+      triggerSemanticSearch(e.target.value);
+    } else {
+      renderVault();
+    }
+  };
+
+  document.getElementById('vault-semantic-btn').onclick = () => {
+    setSemanticMode(!vaultState.semanticMode);
   };
 
   const vFilterBtn = document.getElementById('vault-filter-btn');

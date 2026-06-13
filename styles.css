@@ -2650,3 +2650,86 @@ body {
   margin-top: 10px;
   height: 42px;
 }
+
+/* ===== 语义搜索 ===== */
+.semantic-toggle.on {
+  background: rgba(107, 92, 231, 0.12);
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.semantic-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(107, 92, 231, 0.08);
+  border: 1px solid rgba(107, 92, 231, 0.2);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.semantic-banner.is-warn {
+  background: rgba(255, 167, 38, 0.08);
+  border-color: rgba(255, 167, 38, 0.3);
+}
+
+.semantic-banner-text {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.semantic-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.semantic-banner-actions .btn {
+  height: 28px;
+  font-size: 12px;
+  padding: 0 12px;
+}
+
+.sim-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: rgba(107, 92, 231, 0.12);
+  color: var(--accent2);
+  margin-left: 6px;
+  font-family: 'Outfit', monospace;
+}
+
+.embed-progress-text {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 12px;
+}
+
+.embed-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.embed-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 4px;
+  transition: width 0.2s;
+}
+
+.embed-progress-count {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text3);
+}
