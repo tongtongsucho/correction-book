@@ -837,6 +837,27 @@ body {
   margin-top: 50px;
 }
 
+.back-formulas {
+  display: block;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--accent);
+  background: rgba(196, 148, 74, 0.06);
+  border: 1px solid rgba(196, 148, 74, 0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.back-formulas-label {
+  display: block;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
 .error-box {
   display: flex;
   background: rgba(224, 92, 92, 0.06);
@@ -1417,6 +1438,19 @@ body {
   line-height: 1.8;
   color: var(--text);
   white-space: pre-wrap;
+}
+
+.d-formulas {
+  background: rgba(196, 148, 74, 0.06);
+  border: 1px solid rgba(196, 148, 74, 0.15);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+
+.d-formulas .d-key {
+  color: var(--accent);
 }
 
 .d-tags {

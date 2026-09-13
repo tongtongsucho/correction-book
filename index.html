@@ -110,6 +110,10 @@
               </div>
               <div class="back-body" id="card-back-body">
                 <span class="back-note" id="card-note"></span>
+                <div class="back-formulas" id="card-formulas-box" style="display: none;">
+                  <span class="back-formulas-label mono">💡 套路 &amp; 公式</span>
+                  <span class="back-formulas md-rendered" id="card-formulas"></span>
+                </div>
                 <div class="error-box" id="card-error-box" style="display: none;">
                   <div class="error-bar"></div>
                   <div class="error-content">
@@ -442,6 +446,16 @@
         <div class="md-preview" id="form-note-preview" style="display:none;"></div>
       </div>
 
+      <div class="field">
+        <div class="label">
+          <span class="label-key mono">💡 套路 &amp; 公式</span>
+          <span class="label-name">做题思路、解题套路、常用公式</span>
+          <span class="preview-toggle" id="form-formulas-preview-toggle">预览</span>
+        </div>
+        <textarea class="textarea" id="form-formulas" placeholder="如：求导题先看定义域 → 判断单调性 → 求极值…" rows="3"></textarea>
+        <div class="md-preview" id="form-formulas-preview" style="display:none;"></div>
+      </div>
+
       <div class="actions">
         <div class="btn btn-accent btn-save" id="btn-save">保存到错题本</div>
         <div class="btn btn-ghost" id="btn-cancel">取消</div>
@@ -476,6 +490,11 @@
         <div class="d-section" id="detail-note-section" style="display: none;">
           <span class="d-key mono">解题笔记</span>
           <span class="d-content" id="detail-note"></span>
+        </div>
+
+        <div class="d-formulas" id="detail-formulas-section" style="display: none;">
+          <span class="d-key mono">💡 套路 &amp; 公式</span>
+          <span class="d-content md-rendered" id="detail-formulas"></span>
         </div>
 
         <div class="d-section" id="detail-tags-section" style="display: none;">

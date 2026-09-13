@@ -307,6 +307,7 @@ function resetAddForm() {
   document.getElementById('form-tags').value = '';
   document.getElementById('form-error-reason').value = '';
   document.getElementById('form-note').value = '';
+  document.getElementById('form-formulas').value = '';
   document.getElementById('image-preview').style.display = 'none';
   document.getElementById('upload-empty').style.display = 'flex';
   document.getElementById('upload-actions').style.display = 'none';
@@ -343,6 +344,7 @@ async function startEdit(id) {
     document.getElementById('form-tags').value = (m.tags || []).join(', ');
     document.getElementById('form-error-reason').value = m.errorReason || '';
     document.getElementById('form-note').value = m.note || '';
+    document.getElementById('form-formulas').value = m.formulas || '';
     if (m.imageUrl) {
       document.getElementById('image-preview').src = m.imageUrl;
       document.getElementById('image-preview').style.display = 'block';
@@ -435,15 +437,11 @@ function updateCardCurrent() {
   qEl.innerHTML = renderContent(current.content || current.title || '');
   qEl.classList.add('md-rendered');
   const subEl = document.getElementById('card-question-sub');
-  if (current.title && current.content && current.content !== current.title) {
-    subEl.innerHTML = renderContent(current.content);
-    subEl.classList.add('md-rendered');
-    subEl.style.display = 'block';
-  } else {
-    subEl.style.display = 'none';
-  }
+  subEl.style.display = 'none';
 
   const noteEl = document.getElementById('card-note');
+  const formulasBox = document.getElementById('card-formulas-box');
+  const formulasEl = document.getElementById('card-formulas');
   const errorBox = document.getElementById('card-error-box');
   const backBody = document.getElementById('card-back-body');
   const oldEmpty = backBody.querySelector('.back-empty');
@@ -457,7 +455,15 @@ function updateCardCurrent() {
     const emptySpan = document.createElement('span');
     emptySpan.className = 'back-empty';
     emptySpan.textContent = '暂无解析，记得补充哦';
-    backBody.insertBefore(emptySpan, errorBox);
+    backBody.insertBefore(emptySpan, formulasBox);
+  }
+
+  if (current.formulas) {
+    formulasBox.style.display = 'block';
+    formulasEl.innerHTML = renderContent(current.formulas);
+    formulasEl.classList.add('md-rendered');
+  } else {
+    formulasBox.style.display = 'none';
   }
 
   if (current.errorReason) {
@@ -1742,6 +1748,16 @@ async function loadDetail(id) {
       noteSection.style.display = 'none';
     }
 
+    const formulasSection = document.getElementById('detail-formulas-section');
+    if (m.formulas) {
+      formulasSection.style.display = 'block';
+      const formulasEl = document.getElementById('detail-formulas');
+      formulasEl.innerHTML = renderContent(m.formulas);
+      formulasEl.classList.add('md-rendered');
+    } else {
+      formulasSection.style.display = 'none';
+    }
+
     const tagsSection = document.getElementById('detail-tags-section');
     if (m.tags?.length) {
       tagsSection.style.display = 'block';
@@ -2065,6 +2081,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   setupPreview('form-content', 'form-content-preview', 'form-content-preview-toggle');
   setupPreview('form-note', 'form-note-preview', 'form-note-preview-toggle');
+  setupPreview('form-formulas', 'form-formulas-preview', 'form-formulas-preview-toggle');
 
   // 图谱节点标签面板 → 跳转题库
   const graphTagPanel = document.getElementById('graph-tag-panel');
@@ -2131,6 +2148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagsRaw = document.getElementById('form-tags').value;
     const tags = tagsRaw.split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean);
 
+    const formulas = document.getElementById('form-formulas').value.trim();
 
     if (editingId) {
       // 编辑模式
@@ -2144,6 +2162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         errorReason: document.getElementById('form-error-reason').value.trim(),
         difficulty,
         note: document.getElementById('form-note').value.trim(),
+        formulas
       };
       try {
         await updateMistake(editingId, updates);
@@ -2169,6 +2188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         difficulty,
         errorCount: 1,
         note: document.getElementById('form-note').value.trim(),
+        formulas,
         mastered: false,
         interval: 1,
         nextReview: computeNextSRS('hard', { easeFactor: 2.5, interval: 1, repetitions: 0 }).nextReview,
