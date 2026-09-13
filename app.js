@@ -1641,8 +1641,7 @@ async function loadDetail(id) {
     ).join('');
 
     const titleEl = document.getElementById('detail-title');
-    titleEl.innerHTML = renderContent(m.title || m.content);
-    titleEl.classList.add('md-rendered');
+    titleEl.style.display = 'none';
 
     const imgEl = document.getElementById('detail-image');
     if (m.imageUrl) {

@@ -41,6 +41,9 @@
   box-sizing: border-box;
 }
 
+*::-webkit-scrollbar { width: 0; height: 0; }
+* { scrollbar-width: none; }
+
 body {
   background: #e8e5de;
   color: var(--text);
@@ -416,11 +419,6 @@ body {
   margin: 0 -20px;
   padding-left: 20px;
   padding-right: 20px;
-  scrollbar-width: none;
-}
-
-.hscroll::-webkit-scrollbar {
-  display: none;
 }
 
 .due-card {
@@ -485,6 +483,7 @@ body {
   overflow: hidden;
   line-height: 1.5;
   font-weight: 500;
+  word-break: break-word;
 }
 
 .due-foot {
@@ -772,6 +771,11 @@ body {
   line-height: 1.6;
   color: var(--text);
   font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .card-q-sub {
@@ -1983,6 +1987,7 @@ body {
 .vt-title-text {
   font-weight: 500;
   color: var(--text);
+  word-break: break-word;
 }
 
 .vt-tag {
@@ -2132,6 +2137,7 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
 }
 
 .gc-tags {
@@ -2237,6 +2243,7 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
 }
 
 .bc-tags {
@@ -2338,6 +2345,7 @@ body {
   font-size: 14px;
   line-height: 1.8;
   color: var(--text);
+  word-break: break-word;
 }
 
 .md-rendered p {
@@ -2408,6 +2416,27 @@ body {
 .md-rendered .katex-display {
   margin: 10px 0;
   overflow-x: auto;
+}
+
+/* 列表标题内联化：让 display 公式不撑高卡片，保持紧凑 */
+.due-title .katex-display,
+.recent-title .katex-display,
+.vt-title-text .katex-display,
+.gc-title .katex-display,
+.bc-title .katex-display {
+  display: inline-block;
+  margin: 0;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+.due-title p,
+.recent-title p,
+.vt-title-text p,
+.gc-title p,
+.bc-title p {
+  display: inline;
+  margin: 0;
 }
 
 /* 实时预览 */
