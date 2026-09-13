@@ -40,6 +40,26 @@ function renderContent(text) {
       } catch { mathBlocks.push(`<code>$${escapeHtml(m)}$</code>`); }
       return `\x00M${i}\x00`;
     });
+    // Fallback: unmatched opening $$ (title truncated mid-formula)
+    t = t.replace(/\$\$([^$\n]+?)$/gm, (_, m) => {
+      const i = mathBlocks.length;
+      try {
+        mathBlocks.push(typeof katex !== 'undefined'
+          ? katex.renderToString(m.trim(), { displayMode: true, throwOnError: false })
+          : `<code>$$${escapeHtml(m)}$$</code>`);
+      } catch { mathBlocks.push(`<code>$$${escapeHtml(m)}$$</code>`); }
+      return `\x00M${i}\x00`;
+    });
+    // Fallback: unmatched opening $ (title truncated mid-formula)
+    t = t.replace(/\$([^$\n]+?)$/gm, (_, m) => {
+      const i = mathBlocks.length;
+      try {
+        mathBlocks.push(typeof katex !== 'undefined'
+          ? katex.renderToString(m.trim(), { displayMode: false, throwOnError: false })
+          : `<code>$${escapeHtml(m)}$</code>`);
+      } catch { mathBlocks.push(`<code>$${escapeHtml(m)}$</code>`); }
+      return `\x00M${i}\x00`;
+    });
     return t;
   };
 
@@ -208,7 +228,7 @@ async function refreshIndex() {
               <span class="tag tag-${m.subject}">${subjects[m.subject].name}</span>
               <span class="due-count">×${m.errorCount || 1}</span>
             </div>
-            <span class="due-title serif">${m.title || m.content}</span>
+            <span class="due-title serif md-rendered">${renderContent(m.content || m.title || '')}</span>
             <div class="due-foot">
               <div class="dots">
                 ${[1,2,3].map(d => `<div class="dot ${d <= m.difficulty ? 'on' : ''}"></div>`).join('')}
@@ -243,7 +263,7 @@ async function refreshIndex() {
             </div>
             <div class="recent-main">
               <div class="recent-row1">
-                <span class="recent-title">${m.title || m.content}</span>
+                <span class="recent-title md-rendered">${renderContent(m.content || m.title || '')}</span>
               </div>
               <div class="recent-row2">
                 <span class="tag tag-${m.subject}">${subjects[m.subject].name}</span>
@@ -345,7 +365,7 @@ function updateCardCurrent() {
   ).join('');
 
   const qEl = document.getElementById('card-question');
-  qEl.innerHTML = renderContent(current.title || current.content);
+  qEl.innerHTML = renderContent(current.content || current.title || '');
   qEl.classList.add('md-rendered');
   const subEl = document.getElementById('card-question-sub');
   if (current.title && current.content && current.content !== current.title) {
@@ -1338,7 +1358,7 @@ function renderVaultTable(list) {
     return `
       <div class="vt-row" data-id="${m._id}">
         <div class="vt-cell vt-c-title">
-          <span class="vt-title-text">${escapeHtml(m.title || m.content || '未命名')}</span>${simBadge}
+          <span class="vt-title-text md-rendered">${renderContent(m.content || m.title || '未命名')}</span>${simBadge}
         </div>
         <div class="vt-cell vt-c-subj">
           <span class="tag tag-${m.subject}">${subjects[m.subject]?.name || '其他'}</span>
@@ -1373,7 +1393,7 @@ function renderVaultGallery(list) {
               <span class="tag tag-${m.subject}">${subjects[m.subject]?.name || '其他'}</span>
               <span class="status-pill status-${st.key}">${st.label}</span>
             </div>
-            <div class="gc-title">${escapeHtml(m.title || m.content || '未命名')}</div>
+            <div class="gc-title md-rendered">${renderContent(m.content || m.title || '未命名')}</div>
             <div class="gc-tags">${tags}</div>
             <div class="gc-foot">
               <div class="dots">${[1,2,3].map(d => `<div class="dot ${d <= m.difficulty ? 'on' : ''}"></div>`).join('')}</div>
@@ -1413,7 +1433,7 @@ function renderVaultBoard(list) {
                 const tags = (m.tags || []).slice(0, 2).map(t => `<span class="vt-tag">#${t}</span>`).join('');
                 return `
                   <div class="board-card" data-id="${m._id}">
-                    <div class="bc-title">${escapeHtml(m.title || m.content || '未命名')}</div>
+                    <div class="bc-title md-rendered">${renderContent(m.content || m.title || '未命名')}</div>
                     <div class="bc-tags">${tags}</div>
                     <div class="bc-foot">
                       <span class="status-pill status-${st.key}">${st.label}</span>
@@ -2130,7 +2150,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 注册 Service Worker (PWA)
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').catch(err => {
+    navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' }).catch(err => {
       console.log('SW registration failed:', err);
     });
   }
