@@ -77,6 +77,7 @@ let cardState = {
   flipped: false
 };
 let currentDetailId = null;
+let editingId = null;
 let graphAnim = null;
 let graphSim = null;
 let graphMistakes = [];
@@ -299,6 +300,72 @@ function openDetail(id) {
   currentDetailId = id;
   navigateTo('detail');
   loadDetail(id);
+}
+
+function resetAddForm() {
+  document.getElementById('form-content').value = '';
+  document.getElementById('form-tags').value = '';
+  document.getElementById('form-error-reason').value = '';
+  document.getElementById('form-note').value = '';
+  document.getElementById('image-preview').style.display = 'none';
+  document.getElementById('upload-empty').style.display = 'flex';
+  document.getElementById('upload-actions').style.display = 'none';
+  document.querySelectorAll('#subject-chips .chip').forEach(c => c.classList.remove('chip-on'));
+  document.querySelector('#subject-chips .chip[data-key="math"]').classList.add('chip-on');
+  document.querySelectorAll('#difficulty-chips .chip').forEach(c => c.classList.remove('chip-on'));
+  document.querySelector('#difficulty-chips .chip[data-value="2"]').classList.add('chip-on');
+  editingId = null;
+  const head = document.querySelector('#page-add .head .title');
+  if (head) head.textContent = '录入新错题';
+  const subtitle = document.querySelector('#page-add .head .subtitle');
+  if (subtitle) subtitle.textContent = '拍照或手动输入，知识不再遗漏';
+}
+
+async function startEdit(id) {
+  try {
+    const m = await getMistake(id);
+    if (!m) { showToast('错题不存在'); return; }
+    editingId = id;
+    currentDetailId = id;
+    navigateTo('add');
+    const head = document.querySelector('#page-add .head .title');
+    if (head) {
+      const plain = (m.content || m.title || '')
+        .replace(/\$\$?/g, '')
+        .replace(/[#>*_`~\\{}]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      head.textContent = `编辑本题`;
+    }
+    const subtitle = document.querySelector('#page-add .head .subtitle');
+    if (subtitle) subtitle.textContent = '修改后点击保存';
+    document.getElementById('form-content').value = m.content || '';
+    document.getElementById('form-tags').value = (m.tags || []).join(', ');
+    document.getElementById('form-error-reason').value = m.errorReason || '';
+    document.getElementById('form-note').value = m.note || '';
+    if (m.imageUrl) {
+      document.getElementById('image-preview').src = m.imageUrl;
+      document.getElementById('image-preview').style.display = 'block';
+      document.getElementById('upload-empty').style.display = 'none';
+      document.getElementById('upload-actions').style.display = 'flex';
+    } else {
+      document.getElementById('image-preview').style.display = 'none';
+      document.getElementById('upload-empty').style.display = 'flex';
+      document.getElementById('upload-actions').style.display = 'none';
+    }
+    const subChip = document.querySelector(`#subject-chips .chip[data-key="${m.subject}"]`);
+    if (subChip) {
+      document.querySelectorAll('#subject-chips .chip').forEach(c => c.classList.remove('chip-on'));
+      subChip.classList.add('chip-on');
+    }
+    const diffChip = document.querySelector(`#difficulty-chips .chip[data-value="${m.difficulty}"]`);
+    if (diffChip) {
+      document.querySelectorAll('#difficulty-chips .chip').forEach(c => c.classList.remove('chip-on'));
+      diffChip.classList.add('chip-on');
+    }
+  } catch {
+    showToast('加载失败');
+  }
 }
 
 async function refreshCard() {
@@ -2064,62 +2131,88 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagsRaw = document.getElementById('form-tags').value;
     const tags = tagsRaw.split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean);
 
-    const payload = {
-      title: content.slice(0, 30) || '未命名错题',
-      content,
-      imageUrl,
-      subject,
-      topic: tags[0] || '',
-      tags,
-      errorReason: document.getElementById('form-error-reason').value.trim(),
-      difficulty,
-      errorCount: 1,
-      note: document.getElementById('form-note').value.trim(),
-      mastered: false,
-      interval: 1,
-      nextReview: computeNextSRS('hard', { easeFactor: 2.5, interval: 1, repetitions: 0 }).nextReview,
-      lastReviewed: null,
-      relatedIds: []
-    };
 
-    try {
-      const newId = await addMistake(payload);
-      if (typeof generateEmbedding === 'function' && newId) {
-        const cfg = (typeof getAiConfig === 'function') ? getAiConfig() : null;
-        if (cfg && cfg.apiKey) {
-          generateEmbedding(mistakeToEmbeddingText(payload))
-            .then(vec => {
-              const stored = _getStoredEmbeddings();
-              stored[newId] = vec;
-              _saveEmbeddings(stored);
-            })
-            .catch(err => console.warn('Auto-embed failed:', err));
-        }
+    if (editingId) {
+      // 编辑模式
+      const updates = {
+        title: content.slice(0, 35) || '未命名错题',
+        content,
+        imageUrl,
+        subject,
+        topic: tags[0] || '',
+        tags,
+        errorReason: document.getElementById('form-error-reason').value.trim(),
+        difficulty,
+        note: document.getElementById('form-note').value.trim(),
+      };
+      try {
+        await updateMistake(editingId, updates);
+        showToast('已更新', 800);
+        editingId = null;
+        setTimeout(() => {
+          resetAddForm();
+          openDetail(updates._id || currentDetailId);
+        }, 600);
+      } catch {
+        showToast('更新失败');
       }
-      showToast('已加入错题本', 800);
-      setTimeout(() => {
-        navigateTo('index');
-        document.getElementById('form-content').value = '';
-        document.getElementById('form-tags').value = '';
-        document.getElementById('form-error-reason').value = '';
-        document.getElementById('form-note').value = '';
-        document.getElementById('image-preview').style.display = 'none';
-        document.getElementById('upload-empty').style.display = 'flex';
-        document.getElementById('upload-actions').style.display = 'none';
-        document.querySelectorAll('#subject-chips .chip').forEach(c => c.classList.remove('chip-on'));
-        document.querySelector('#subject-chips .chip[data-key="math"]').classList.add('chip-on');
-        document.querySelectorAll('#difficulty-chips .chip').forEach(c => c.classList.remove('chip-on'));
-        document.querySelector('#difficulty-chips .chip[data-value="2"]').classList.add('chip-on');
-      }, 800);
-    } catch (err) {
-      showToast('保存失败');
+    } else {
+      // 新增模式
+      const payload = {
+        title: content.slice(0, 35) || '未命名错题',
+        content,
+        imageUrl,
+        subject,
+        topic: tags[0] || '',
+        tags,
+        errorReason: document.getElementById('form-error-reason').value.trim(),
+        difficulty,
+        errorCount: 1,
+        note: document.getElementById('form-note').value.trim(),
+        mastered: false,
+        interval: 1,
+        nextReview: computeNextSRS('hard', { easeFactor: 2.5, interval: 1, repetitions: 0 }).nextReview,
+        lastReviewed: null,
+        relatedIds: []
+      };
+
+      try {
+        const newId = await addMistake(payload);
+        if (typeof generateEmbedding === 'function' && newId) {
+          const cfg = (typeof getAiConfig === 'function') ? getAiConfig() : null;
+          if (cfg && cfg.apiKey) {
+            generateEmbedding(mistakeToEmbeddingText(payload))
+              .then(vec => {
+                const stored = _getStoredEmbeddings();
+                stored[newId] = vec;
+                _saveEmbeddings(stored);
+              })
+              .catch(err => console.warn('Auto-embed failed:', err));
+          }
+        }
+        showToast('已加入错题本', 800);
+        setTimeout(() => {
+          navigateTo('index');
+          resetAddForm();
+        }, 800);
+      } catch (err) {
+        showToast('保存失败');
+      }
     }
   };
 
-  document.getElementById('btn-cancel').onclick = () => navigateTo('index');
+  document.getElementById('btn-cancel').onclick = () => {
+    editingId = null;
+    resetAddForm();
+    navigateTo(currentDetailId ? 'detail' : 'index');
+  };
 
   document.getElementById('btn-review-now').onclick = () => {
     openCard(currentDetailId);
+  };
+
+  document.getElementById('btn-edit').onclick = () => {
+    if (currentDetailId) startEdit(currentDetailId);
   };
 
   document.getElementById('btn-toggle-mastered').onclick = async () => {
