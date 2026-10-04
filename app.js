@@ -71,6 +71,13 @@ function renderContent(text) {
 }
 
 let currentPage = 'index';
+let lastListPage = 'index';
+
+const DESKTOP_MQ = window.matchMedia('(min-width: 1024px)');
+function isDesktopLayout() {
+  return DESKTOP_MQ.matches;
+}
+
 let cardState = {
   list: [],
   cursor: 0,
@@ -438,6 +445,18 @@ function updateCardCurrent() {
   qEl.classList.add('md-rendered');
   const subEl = document.getElementById('card-question-sub');
   subEl.style.display = 'none';
+
+  const imgEl = document.getElementById('card-image');
+  const frontBody = document.getElementById('card-front-body');
+  if (current.imageUrl) {
+    imgEl.src = current.imageUrl;
+    imgEl.style.display = 'block';
+    frontBody.classList.add('has-image');
+  } else {
+    imgEl.removeAttribute('src');
+    imgEl.style.display = 'none';
+    frontBody.classList.remove('has-image');
+  }
 
   const noteEl = document.getElementById('card-note');
   const formulasBox = document.getElementById('card-formulas-box');
