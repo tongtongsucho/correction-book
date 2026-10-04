@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>错题本 - Mistake Book</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/glass.css">
+  <link rel="stylesheet" href="styles/motion.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/cards.css">
+  <link rel="stylesheet" href="styles/pages.css">
+  <link rel="stylesheet" href="styles/content.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,26 +35,26 @@
         <span class="side-collapse" id="side-collapse" title="收起 / 展开侧栏">«</span>
       </div>
       <nav class="side-nav">
-        <div class="tab-item active" data-page="index">
+        <button type="button" class="tab-item active" data-page="index">
           <span class="tab-icon">🏠</span>
           <span class="tab-label">首页</span>
-        </div>
-        <div class="tab-item" data-page="vault">
+        </button>
+        <button type="button" class="tab-item" data-page="vault">
           <span class="tab-icon">📚</span>
           <span class="tab-label">题库</span>
-        </div>
-        <div class="tab-item" data-page="card">
+        </button>
+        <button type="button" class="tab-item" data-page="card">
           <span class="tab-icon">🃏</span>
           <span class="tab-label">复习</span>
-        </div>
-        <div class="tab-item" data-page="graph">
+        </button>
+        <button type="button" class="tab-item" data-page="graph">
           <span class="tab-icon">🌐</span>
           <span class="tab-label">图谱</span>
-        </div>
-        <div class="tab-item" data-page="add">
+        </button>
+        <button type="button" class="tab-item" data-page="add">
           <span class="tab-icon">➕</span>
           <span class="tab-label">录入</span>
-        </div>
+        </button>
       </nav>
       <div class="side-foot">
         <div class="side-action" id="sidebar-theme">
@@ -678,26 +687,26 @@
 
   <!-- 底部导航 -->
   <nav class="tab-bar">
-    <div class="tab-item active" data-page="index">
+    <button type="button" class="tab-item active" data-page="index">
       <span class="tab-icon">🏠</span>
       <span class="tab-label">首页</span>
-    </div>
-    <div class="tab-item" data-page="vault">
+    </button>
+    <button type="button" class="tab-item" data-page="vault">
       <span class="tab-icon">📚</span>
       <span class="tab-label">题库</span>
-    </div>
-    <div class="tab-item" data-page="card">
+    </button>
+    <button type="button" class="tab-item" data-page="card">
       <span class="tab-icon">🃏</span>
       <span class="tab-label">复习</span>
-    </div>
-    <div class="tab-item" data-page="graph">
+    </button>
+    <button type="button" class="tab-item" data-page="graph">
       <span class="tab-icon">🌐</span>
       <span class="tab-label">图谱</span>
-    </div>
-    <div class="tab-item" data-page="add">
+    </button>
+    <button type="button" class="tab-item" data-page="add">
       <span class="tab-icon">➕</span>
       <span class="tab-label">录入</span>
-    </div>
+    </button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -705,6 +714,8 @@
   <script src="utils/review.js"></script>
   <script src="utils/db.js"></script>
   <script src="utils/ai.js"></script>
+  <script src="utils/glass.js"></script>
+  <script src="utils/motion.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

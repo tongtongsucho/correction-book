@@ -1,0 +1,12 @@
+/* 基础重置与全局排版：元素默认样式归零，保证语义标签外观与原标签一致 */
+:where(button.tab-item) {
+  appearance: none;
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: inherit;
+}
