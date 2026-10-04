@@ -15,6 +15,53 @@
 <body>
   <div id="app">
 
+    <!-- ===== 桌面端左侧栏（≥1024px 显示） ===== -->
+    <aside class="sidebar">
+      <div class="side-brand">
+        <span class="side-logo">📖</span>
+        <div class="side-brand-text">
+          <span class="side-title serif brand-grad">错题本</span>
+          <span class="side-sub mono">mistake.book</span>
+        </div>
+        <span class="side-collapse" id="side-collapse" title="收起 / 展开侧栏">«</span>
+      </div>
+      <nav class="side-nav">
+        <div class="tab-item active" data-page="index">
+          <span class="tab-icon">🏠</span>
+          <span class="tab-label">首页</span>
+        </div>
+        <div class="tab-item" data-page="vault">
+          <span class="tab-icon">📚</span>
+          <span class="tab-label">题库</span>
+        </div>
+        <div class="tab-item" data-page="card">
+          <span class="tab-icon">🃏</span>
+          <span class="tab-label">复习</span>
+        </div>
+        <div class="tab-item" data-page="graph">
+          <span class="tab-icon">🌐</span>
+          <span class="tab-label">图谱</span>
+        </div>
+        <div class="tab-item" data-page="add">
+          <span class="tab-icon">➕</span>
+          <span class="tab-label">录入</span>
+        </div>
+      </nav>
+      <div class="side-foot">
+        <div class="side-action" id="sidebar-theme">
+          <span class="theme-icon">🌙</span>
+          <span class="tab-label">主题</span>
+        </div>
+        <div class="side-action" id="sidebar-settings">
+          <span class="tab-icon">⚙️</span>
+          <span class="tab-label">设置</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 中栏 / 详情栏 拖拽分隔条（仅桌面端） -->
+    <div class="col-resizer" id="col-resizer" title="拖拽调整详情栏宽度"></div>
+
     <!-- ===== 首页 ===== -->
     <section id="page-index" class="page active">
       <div class="topbar">
@@ -465,10 +512,11 @@
 
     <!-- ===== 错题详情 ===== -->
     <section id="page-detail" class="page">
-      <div id="detail-content">
+      <div id="detail-content" style="display: none;">
         <div class="d-head">
           <span class="tag" id="detail-subject-tag">数学</span>
           <div class="dots" id="detail-difficulty-dots"></div>
+          <div class="detail-close" id="detail-close" title="关闭详情">✕</div>
         </div>
 
         <span class="d-title serif" id="detail-title"></span>
@@ -536,7 +584,7 @@
         <div class="bottom-pad"></div>
       </div>
 
-      <div class="d-loading" id="detail-loading">
+      <div class="d-loading" id="detail-loading" style="display: none;">
         <span>加载中…</span>
       </div>
     </section>

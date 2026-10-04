@@ -119,8 +119,9 @@ function toggleTheme() {
 }
 
 function updateThemeIcon(theme) {
-  const icon = document.querySelector('.theme-icon');
-  if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+  document.querySelectorAll('.theme-icon').forEach(icon => {
+    icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+  });
 }
 
 function compressImage(file, callback, maxWidth = 800, quality = 0.6) {
@@ -187,23 +188,65 @@ function showModal(title, content, confirmText = '确定', cancelText = '取消'
   });
 }
 
+function refreshPage(page) {
+  if (page === 'index') refreshIndex();
+  if (page === 'card') refreshCard();
+  if (page === 'graph') refreshGraph();
+  if (page === 'vault') refreshVault();
+}
+
+// 只切换中栏/整页的主页面，不影响桌面端右栏详情
+function applyMainPage(page) {
+  document.querySelectorAll('#app > .page').forEach(p => {
+    if (p.id !== 'page-detail') p.classList.remove('active');
+  });
+  const target = document.getElementById(`page-${page}`);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t => {
+    t.classList.toggle('active', t.dataset.page === page);
+  });
+}
+
 function navigateTo(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  const desktop = isDesktopLayout();
+  const pane = document.getElementById('page-detail');
+  const appEl = document.getElementById('app');
+
+  // 桌面端：详情以弹出栏形式展示，中栏保持列表页
+  if (desktop && page === 'detail') {
+    let main = currentPage;
+    if (main === 'detail' || main === 'add') main = lastListPage;
+    if (main !== currentPage) {
+      currentPage = main;
+      applyMainPage(main);
+      refreshPage(main);
+    }
+    pane.classList.add('active');
+    appEl.classList.add('detail-open');
+    return;
+  }
+
+  document.querySelectorAll('#app > .page').forEach(p => {
+    if (desktop && p.id === 'page-detail') return;
+    p.classList.remove('active');
+  });
+
+  // 收起详情栏（桌面端）/ 退出详情整页（移动端）
+  pane.classList.remove('active');
+  appEl.classList.remove('detail-open');
 
   const target = document.getElementById(`page-${page}`);
   if (target) {
     target.classList.add('active');
     currentPage = page;
+    if (page === 'index' || page === 'vault') lastListPage = page;
   }
 
-  const tab = document.querySelector(`.tab-item[data-page="${page}"]`);
-  if (tab) tab.classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t => {
+    t.classList.toggle('active', t.dataset.page === page);
+  });
 
-  if (page === 'index') refreshIndex();
-  if (page === 'card') refreshCard();
-  if (page === 'graph') refreshGraph();
-  if (page === 'vault') refreshVault();
+  refreshPage(page);
 }
 
 async function refreshIndex() {
@@ -1711,9 +1754,35 @@ async function testAiConnection() {
   }
 }
 
+// 关闭详情：桌面端收起右栏，移动端返回列表页
+function closeDetail() {
+  if (isDesktopLayout()) {
+    document.getElementById('page-detail').classList.remove('active');
+    document.getElementById('app').classList.remove('detail-open');
+  } else {
+    navigateTo(lastListPage);
+  }
+}
+
+// 清空桌面端右栏详情（删除错题后调用）
+function clearDetailPane() {
+  currentDetailId = null;
+  document.getElementById('detail-content').style.display = 'none';
+  document.getElementById('detail-loading').style.display = 'none';
+  document.querySelectorAll('#app .is-selected').forEach(el => el.classList.remove('is-selected'));
+  if (isDesktopLayout()) {
+    document.getElementById('page-detail').classList.remove('active');
+    document.getElementById('app').classList.remove('detail-open');
+  }
+}
+
 async function loadDetail(id) {
   document.getElementById('detail-content').style.display = 'none';
   document.getElementById('detail-loading').style.display = 'flex';
+
+  // 高亮列表中的当前条目（三栏布局下可见）
+  document.querySelectorAll('#app .is-selected').forEach(el => el.classList.remove('is-selected'));
+  document.querySelectorAll(`#app [data-id="${id}"]`).forEach(el => el.classList.add('is-selected'));
 
   try {
     const m = await getMistake(id);
@@ -1806,14 +1875,20 @@ async function loadDetail(id) {
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   document.getElementById('page-index').classList.add('active');
-  document.querySelector('.tab-item[data-page="index"]').classList.add('active');
+  document.querySelectorAll('.tab-item[data-page="index"]').forEach(t => t.classList.add('active'));
   refreshIndex();
 
   document.getElementById('theme-toggle').onclick = toggleTheme;
+  const sidebarTheme = document.getElementById('sidebar-theme');
+  if (sidebarTheme) sidebarTheme.onclick = toggleTheme;
 
   // 设置面板
   const settingsModal = document.getElementById('settings-modal');
   document.getElementById('avatar-btn').onclick = () => {
+    settingsModal.style.display = 'flex';
+  };
+  const sidebarSettings = document.getElementById('sidebar-settings');
+  if (sidebarSettings) sidebarSettings.onclick = () => {
     settingsModal.style.display = 'flex';
   };
   settingsModal.onclick = (e) => {
@@ -2254,6 +2329,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentDetailId) startEdit(currentDetailId);
   };
 
+  document.getElementById('detail-close').onclick = () => closeDetail();
+
   document.getElementById('btn-toggle-mastered').onclick = async () => {
     const m = await getMistake(currentDetailId);
     if (!m) return;
@@ -2272,12 +2349,105 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await deleteMistake(currentDetailId);
       if (typeof deleteEmbedding === 'function') deleteEmbedding(currentDetailId);
+      clearDetailPane();
       showToast('已删除');
       setTimeout(() => navigateTo('index'), 600);
     } catch {
       showToast('删除失败');
     }
   };
+
+  // 断点切换：单栏 ↔ 三栏
+  let wasDesktop = isDesktopLayout();
+  window.addEventListener('resize', () => {
+    const now = isDesktopLayout();
+    if (now === wasDesktop) return;
+    wasDesktop = now;
+    const pane = document.getElementById('page-detail');
+    const appEl = document.getElementById('app');
+    if (now) {
+      if (pane.classList.contains('active')) {
+        // 移动端正停在详情整页 → 桌面端 = 列表页 + 弹出详情栏
+        currentPage = lastListPage;
+        applyMainPage(lastListPage);
+        appEl.classList.add('detail-open');
+      } else {
+        appEl.classList.remove('detail-open');
+      }
+    } else {
+      appEl.classList.remove('detail-open');
+      if (pane.classList.contains('active')) {
+        // 桌面端详情栏开着 → 移动端显示详情整页
+        currentPage = 'detail';
+        document.querySelectorAll('#app > .page').forEach(p => {
+          if (p.id !== 'page-detail') p.classList.remove('active');
+        });
+      }
+    }
+    refreshPage(currentPage);
+  });
+
+  // 详情栏宽度拖拽调节（三栏布局）
+  const DETAIL_W_KEY = 'detailPaneWidth';
+  const appEl = document.getElementById('app');
+  const resizer = document.getElementById('col-resizer');
+  const clampDetail = w => Math.max(280, Math.min(760, Math.round(w)));
+  try {
+    const savedW = parseInt(localStorage.getItem(DETAIL_W_KEY), 10);
+    if (savedW) appEl.style.setProperty('--detail-w', clampDetail(savedW) + 'px');
+  } catch { /* ignore */ }
+
+  let resizingPane = false;
+  if (resizer) {
+    resizer.addEventListener('pointerdown', (e) => {
+      if (!isDesktopLayout()) return;
+      resizingPane = true;
+      resizer.classList.add('dragging');
+      appEl.classList.add('resizing');
+      resizer.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    resizer.addEventListener('pointermove', (e) => {
+      if (!resizingPane) return;
+      const rect = appEl.getBoundingClientRect();
+      appEl.style.setProperty('--detail-w', clampDetail(rect.right - e.clientX) + 'px');
+    });
+    const endResize = () => {
+      if (!resizingPane) return;
+      resizingPane = false;
+      resizer.classList.remove('dragging');
+      appEl.classList.remove('resizing');
+      const w = parseInt(getComputedStyle(appEl).getPropertyValue('--detail-w'), 10) || 400;
+      localStorage.setItem(DETAIL_W_KEY, String(clampDetail(w)));
+      // 让图谱 canvas 重新适配新宽度
+      window.dispatchEvent(new Event('resize'));
+    };
+    resizer.addEventListener('pointerup', endResize);
+    resizer.addEventListener('pointercancel', endResize);
+  }
+
+  // 侧栏收起 / 展开（仅桌面端可见）
+  const SIDE_KEY = 'sideCollapsed';
+  const sideToggle = document.getElementById('side-collapse');
+  const applySideState = () => {
+    const collapsed = localStorage.getItem(SIDE_KEY) === '1';
+    appEl.classList.toggle('side-collapsed', collapsed);
+    if (sideToggle) {
+      sideToggle.textContent = collapsed ? '»' : '«';
+      sideToggle.title = collapsed ? '展开侧栏' : '收起侧栏';
+    }
+  };
+  applySideState();
+  if (sideToggle) {
+    sideToggle.onclick = () => {
+      const collapsed = appEl.classList.toggle('side-collapsed');
+      localStorage.setItem(SIDE_KEY, collapsed ? '1' : '0');
+      sideToggle.textContent = collapsed ? '»' : '«';
+      sideToggle.title = collapsed ? '展开侧栏' : '收起侧栏';
+      // 中栏宽度变化，让图谱 canvas 重新适配
+      window.dispatchEvent(new Event('resize'));
+    };
+  }
 
   // 注册 Service Worker (PWA)
   if ('serviceWorker' in navigator) {
